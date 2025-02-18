@@ -14,6 +14,10 @@ logs = []
 data_lock = Lock()
 
 
+@app.route('/ping', methods=['GET'])
+def ping():
+    return 'The server is running', 200
+
 @app.route('/send_command', methods=['POST'])
 def send_command():
     """מקבל פקודות ממחשב המפעיל ומאחסן אותן"""
