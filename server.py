@@ -1,8 +1,10 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import json
 import os
 
 app = Flask(__name__)
+CORS(app)  # מאפשר בקשות מכל דומיין
 
 
 def write_to_json(name_j, data):
