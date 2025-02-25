@@ -111,7 +111,19 @@ def check_status():
     except json.JSONDecodeError:
         return jsonify({"error": "Invalid JSON file"}), 500
 
-
+@app.route('/api/status/all', methods=['GET'])
+def get_data():
+    """ שליפת קובץ הסטטוסים של כל המכשירים המחוברים """
+    try:
+        with open("evice_status.json", "r", encoding="utf-8") as file:
+            data_json = json.load(file)
+            print("📤 נתונים שנשלחו:", data_json)
+        return jsonify(data_json)
+    except FileNotFoundError:
+        return jsonify({"error": f"No data found "}), 404
+    except json.JSONDecodeError:
+        return jsonify({"error": "Invalid JSON file"}), 500
+        
 @app.route('/api/status/change', methods=['POST'])
 def change_status():
     """ Receives status data from the website and saves it to a file based on the MAC address """
