@@ -3,7 +3,7 @@ from flask_cors import CORS
 import json
 import os
 
-app = Flask(_name_)
+app = Flask(__name__)
 CORS(app)  # מאפשר בקשות מכל דומיין
 
 
@@ -137,6 +137,6 @@ def change_status():
 
 
 
-if _name_ == '_main_':
+if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
