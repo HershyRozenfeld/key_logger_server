@@ -97,7 +97,7 @@ def get_status_all():
     """ שליפת קובץ הסטטוסים של כל המכשירים המחוברים עבור הדף אינטרנט """
     print("/api/status/all")
     try:
-        with open("evice_status.json", "r", encoding="utf-8") as file:
+        with open("device_status.json", "r", encoding="utf-8") as file:
             data_json = json.load(file)
             print("📤 נתונים שנשלחו:", data_json)
         return jsonify(data_json)
