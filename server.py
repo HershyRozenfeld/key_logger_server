@@ -112,7 +112,7 @@ def check_status():
         return jsonify({"error": "Invalid JSON file"}), 500
 
 @app.route('/api/status/all', methods=['GET'])
-def get_data():
+def get_status_all():
     """ שליפת קובץ הסטטוסים של כל המכשירים המחוברים """
     try:
         with open("evice_status.json", "r", encoding="utf-8") as file:
