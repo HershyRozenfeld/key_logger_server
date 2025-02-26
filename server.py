@@ -177,14 +177,14 @@ def get_device_logs():
     if not mac_address:
         return jsonify({"error": "Missing mac_address in headers"}), 400
     try:
-        file_path = "all_devices_data.json" # קריאה מהקובץ המרכזי
+        file_path = f"{mac_address}.json"
         if os.path.exists(file_path):
             with open(file_path, "r", encoding="utf-8") as file:
-                all_logs = json.load(file)
-                device_logs = all_logs.get(mac_address, []) # שליפת לוגים לפי מק, מחזיר רשימה ריקה אם אין
-                print(f"✅ לוגים שנשלחו עבור {mac_address}:", device_logs)
-                return jsonify(device_logs) # מחזיר רשימה של לוגים
-        return jsonify([]), 200  # אם אין קובץ או אין לוגים למק, מחזיר רשימה ריקה
+                all_logs = json.load(file)  # זהו מערך של מילונים
+                # מחזירים את כל הרשימה כפי שהיא
+                print(f"✅ לוגים שנשלחו עבור {mac_address}:", all_logs)
+                return jsonify(all_logs)
+        return jsonify([]), 200  # אם אין קובץ, מחזיר רשימה ריקה
     except Exception as e:
         print(f"❌ שגיאה בשליפת לוגים עבור {mac_address}:", e)
         return jsonify({"error": str(e)}), 500
