@@ -50,6 +50,30 @@ def status_update():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/data/upload', methods=['POST'])
+def upload_data():
+    #    שולח בקשת POST לעדכון קובץ דאטא של מחשב ספציפי לפי כתובת MAC.
+    print("/api/data/upload")
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Invalid JSON"}), 400
+
+        mac_address = data.get("Mac-Address")
+        if not mac_address:
+            return jsonify({"error": "Missing macAddress"}), 400
+
+        data = {"mac_address": data}
+        write_to_json("device_status", data)
+        print("📥 Received data:", data)
+        return jsonify({"message": "Success"}), 200
+    except json.JSONDecodeError:
+        return jsonify({"error": "Invalid JSON file"}), 500
+    except Exception as e:
+        print("❌ Error:", e)
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/api/data/files', methods=['GET'])
 def get_data():
     """ שליפת נתונים מהשרת עבור הקיי לוגר לפי כתובת MAC """
@@ -133,8 +157,6 @@ def change_status():
     except Exception as e:
         print("❌ Error:", e)
         return jsonify({"error": str(e)}), 500
-
-
 
 
 if __name__ == '__main__':
