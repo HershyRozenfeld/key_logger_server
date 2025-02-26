@@ -145,7 +145,19 @@ def change_status():
         data = request.get_json()
         if not data or "mac_address" not in data:
             return jsonify({"error": "Invalid JSON or missing mac_address"}), 400
-        write_to_change_status(data)
+
+        mac_address = data["mac_address"]
+
+        # עדכן את השם ישירות ב-device_status.json
+        if "name" in data:
+            name_update = {"mac_address": mac_address, "name": data["name"]}
+            write_to_device_status(name_update)
+
+        # הכן נתונים עבור change_device_status.json (בלי השם)
+        change_data = {k: v for k, v in data.items() if k != "name"}
+        if change_data:  # שמור רק אם יש נתונים מעבר לשם
+            write_to_change_status(change_data)
+
         print("✅ נתוני סטטוס מהאתר התקבלו:", data)
         return jsonify({"message": "Success"}), 200
     except Exception as e:
