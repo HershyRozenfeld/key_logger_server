@@ -4,7 +4,7 @@ import json
 import os
 from datetime import datetime
 
-app = Flask(_name_)
+app = Flask(__name__)
 CORS(app)
 
 REQUIRED_FILES = {
@@ -190,7 +190,7 @@ def change_status():
         return jsonify({"error": str(e)}), 500
 
 
-if _name_ == '_main_':
+if __name__ == '__main__':
     ensure_files_exist()
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
