@@ -120,7 +120,7 @@ def upload_data():
     print("📡 התחלת טיפול בבקשת העלאת נתוני מחשב מהאתר")
     data = {request.headers.get("mac-address"):request.get_json()}
     try:
-        if not data or "mac_address" not in data:
+        if not data or "mac-address" not in data:
             return jsonify({"error": "Invalid JSON or missing mac_address"}), 400
         write_to_device_data(data)
         print("✅ נתוני מחשב מהאתר התקבלו:", data)
