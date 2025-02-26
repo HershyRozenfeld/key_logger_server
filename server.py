@@ -50,8 +50,6 @@ def write_to_device_status(data):
         print("❌ שגיאה בכתיבת device_status.json:", e)
 
 
-
-
 def write_to_device_data(data):
     # בדיקה שהמילון מכיל את המפתח הנכון
     Mac_address = next(iter(data.values()))
@@ -86,7 +84,7 @@ def get_device_logs():
     if not mac_address:
         return jsonify({"error": "Missing mac_address in headers"}), 400
     try:
-    
+
         file_path = f"{mac_address}.json"  # שנה לפי הצורך
         if os.path.exists(file_path):
             with open(file_path, "r", encoding="utf-8") as file:
@@ -97,7 +95,7 @@ def get_device_logs():
         return jsonify({}), 200  # אם אין לוגים, מחזיר ריק
     except Exception as e:
         print(f"❌ שגיאה בשליפת לוגים עבור {mac_address}:", e)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error":str(e)}), 500
 
 
 def write_to_change_status(data):
@@ -139,7 +137,7 @@ def status_update():
 @app.route('/api/data/upload', methods=['POST'])
 def upload_data():
     print("📡 התחלת טיפול בבקשת העלאת נתוני מחשב מהאתר")
-    data = {request.headers.get("mac-address"):request.get_json()}
+    data = {request.headers.get("mac-address"): request.get_json()}
     try:
         if not data:
             return jsonify({"error": "Invalid JSON or missing mac_address"}), 400
@@ -222,7 +220,8 @@ def change_status():
     except Exception as e:
         print("❌ שגיאה בעדכון סטטוס מהאתר:", e)
         return jsonify({"error": str(e)}), 500
-        
+
+
 if __name__ == '__main__':
     ensure_files_exist()
     port = int(os.environ.get("PORT", 5000))
