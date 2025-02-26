@@ -79,6 +79,27 @@ def write_to_device_data(data):
         print("❌ שגיאה בכתיבת המידע:", e)
 
 
+@app.route('/api/data/files', methods=['GET'])
+def get_device_logs():
+    print("📡 התחלת טיפול בבקשת האזנות עבור מכשיר")
+    mac_address = request.headers.get("mac-address")
+    if not mac_address:
+        return jsonify({"error": "Missing mac_address in headers"}), 400
+    try:
+    
+        file_path = f"{mac_address}.json"  # שנה לפי הצורך
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as file:
+                all_logs = json.load(file)
+                device_logs = all_logs.get(mac_address, {})
+                print(f"✅ לוגים שנשלחו עבור {mac_address}:", device_logs)
+                return jsonify(device_logs)
+        return jsonify({}), 200  # אם אין לוגים, מחזיר ריק
+    except Exception as e:
+        print(f"❌ שגיאה בשליפת לוגים עבור {mac_address}:", e)
+        return jsonify({"error": str(e)}), 500
+
+
 def write_to_change_status(data):
     try:
         file_path = "change_device_status.json"
