@@ -3,6 +3,7 @@ from flask_cors import CORS
 import json
 import os
 from datetime import datetime
+import pytz
 
 app = Flask(__name__)
 CORS(app)
@@ -38,7 +39,8 @@ def write_to_device_status(data):
                     data_json = []
         else:
             data_json = []
-        data["lastSeen"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+        israel_tz = pytz.timezone('Asia/Jerusalem')
+        data["lastSeen"] = datetime.now(israel_tz).strftime("%d/%m/%Y %H:%M")
         device_index = next((i for i, item in enumerate(data_json) if item.get("mac_address") == mac_address), -1)
         if device_index >= 0:
             data_json[device_index].update(data)
@@ -252,6 +254,42 @@ def change_status():
         return jsonify({"message": "Success"}), 200
     except Exception as e:
         print("❌ שגיאה בעדכון סטטוס מהאתר:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/files/list', methods=['GET'])
+def list_files():
+    try:
+        # קבלת הספרייה הנוכחית שבה השרת רץ
+        current_dir = os.getcwd()
+
+        # רשימת כל הפריטים בספרייה
+        all_items = os.listdir(current_dir)
+
+        # סינון לרשימת קבצים בלבד (לא תיקיות) וקבלת פרטים
+        files_info = []
+        for item in all_items:
+            item_path = os.path.join(current_dir, item)
+            if os.path.isfile(item_path):  # בדיקה שזה קובץ ולא תיקייה
+                file_size = os.path.getsize(item_path)  # גודל הקובץ בבייטים
+                files_info.append({
+                    "name": item,
+                    "size_bytes": file_size
+                })
+
+        # הדפסה ללוג של השרת (נראה בקונסולה של Render)
+        print(f"📂 קבצים בספרייה הנוכחית ({current_dir}):")
+        for file in files_info:
+            print(f"  - {file['name']}: {file['size_bytes']} בייטים")
+
+        # החזרת התגובה כ-JSON ללקוח
+        return jsonify({
+            "files": files_info,
+            "total_files": len(files_info)
+        }), 200
+
+    except Exception as e:
+        print(f"❌ שגיאה ברשימת הקבצים: {e}")
         return jsonify({"error": str(e)}), 500
 
 
