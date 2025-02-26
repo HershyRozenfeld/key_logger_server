@@ -201,9 +201,8 @@ def change_status():
     except Exception as e:
         print("❌ שגיאה בעדכון סטטוס מהאתר:", e)
         return jsonify({"error": str(e)}), 500
-
-
+        
 if __name__ == '__main__':
     ensure_files_exist()
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=port, debug=True)
