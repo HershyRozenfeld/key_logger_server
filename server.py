@@ -77,6 +77,39 @@ def write_to_device_data(data):
         print("❌ שגיאה בכתיבת המידע:", e)
 
 
+def xor_encrypt_decrypt(text):
+    """ מבצע XOR על מחרוזת ומחזיר מחרוזת של תווים """
+    return ''.join(chr(ord(char) ^ 5) for char in text)
+
+
+def xor_decrypt_dict_list(data):
+    processed_dict = {}
+
+    # 🔹 שמירה על כתובת ה-MAC כמו שהיא (לא מבצעים עליה XOR)
+    mac_address, timestamps_data = next(iter(data.items()))  # מקבלים את ה-MAC ואת הנתונים שלו
+    processed_timestamps_data = {}
+
+    # 🔹 עיבוד כל חותמת זמן
+    for timestamp_key, dictionary_list in timestamps_data.items():
+        processed_list = []
+        for dictionary in dictionary_list:
+            processed_dict_entry = {}
+            for k, v in dictionary.items():
+                if isinstance(k, str) and isinstance(v, str):  # רק אם שניהם מחרוזות
+                    decrypted_key = xor_encrypt_decrypt(k)
+                    decrypted_value = xor_encrypt_decrypt(v)
+                    processed_dict_entry[decrypted_key] = decrypted_value
+                else:
+                    processed_dict_entry[k] = v  # השארת ערכים אחרים ללא שינוי
+            processed_list.append(processed_dict_entry)
+
+        processed_timestamps_data[timestamp_key] = processed_list  # שמירת המידע החדש
+
+    # 🔹 החזרת המילון המעובד עם ה-MAC ללא שינוי
+    processed_dict[mac_address] = processed_timestamps_data
+    return processed_dict
+
+
 @app.route('/api/data/files', methods=['GET'])
 def get_device_logs():
     print("📡 התחלת טיפול בבקשת האזנות עבור מכשיר")
@@ -95,7 +128,7 @@ def get_device_logs():
         return jsonify({}), 200  # אם אין לוגים, מחזיר ריק
     except Exception as e:
         print(f"❌ שגיאה בשליפת לוגים עבור {mac_address}:", e)
-        return jsonify({"error":str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
 
 def write_to_change_status(data):
