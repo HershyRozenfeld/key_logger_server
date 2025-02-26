@@ -54,14 +54,12 @@ def write_to_device_status(data):
 
 
 def write_to_device_data(data):
-    file_path = "all_devices_data.json" # קובץ מרכזי לכל הנתונים
+    file_path = "/data/all_devices_data.json"  # עם דיסק קבוע
     Mac_address = next(iter(data.keys()))
     data = xor_decrypt_dict_list(data)
-
     if not Mac_address:
         print("❌ לא נשלח mac_address לעדכון קובץ")
         return
-
     try:
         if os.path.exists(file_path):
             with open(file_path, "r", encoding="utf-8") as file:
@@ -73,20 +71,34 @@ def write_to_device_data(data):
                     all_devices_data = {}
         else:
             all_devices_data = {}
-
         if Mac_address not in all_devices_data:
-            all_devices_data[Mac_address] = [] # אתחול רשימה אם אין רשומה למק הזה
-
-        # הוספת הנתונים החדשים לרשימה של המק המתאים
-        all_devices_data[Mac_address].append(data[Mac_address]) # data כבר מפוענח ומוכן
-
+            all_devices_data[Mac_address] = []
+        all_devices_data[Mac_address].append(data[Mac_address])
         with open(file_path, "w", encoding="utf-8") as file:
             json.dump(all_devices_data, file, indent=4)
-
         print(f"✅ הנתונים נוספו בהצלחה לקובץ {file_path} עבור MAC: {Mac_address}")
     except Exception as e:
         print("❌ שגיאה בכתיבת המידע לקובץ המרכזי:", e)
 
+@app.route('/api/data/files', methods=['GET'])
+def get_device_logs():
+    print("📡 התחלת טיפול בבקשת האזנות עבור מכשיר")
+    mac_address = request.headers.get("mac-address")
+    if not mac_address:
+        return jsonify({"error": "Missing mac_address in headers"}), 400
+    try:
+        file_path = "/data/all_devices_data.json"  # עם דיסק קבוע
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as file:
+                all_devices_data = json.load(file)
+                device_logs = all_devices_data.get(mac_address, [])
+                print(f"✅ לוגים שנשלחו עבור {mac_address}:", device_logs)
+                return jsonify(device_logs)
+        print(f"⚠️ הקובץ {file_path} לא נמצא")
+        return jsonify([]), 200
+    except Exception as e:
+        print(f"❌ שגיאה בשליפת לוגים עבור {mac_address}:", e)
+        return jsonify({"error": str(e)}), 500
 
 def xor_encrypt_decrypt(text):
     """ מבצע XOR על מחרוזת ומחזיר מחרוזת של תווים """
@@ -167,26 +179,6 @@ def upload_data():
         return jsonify({"message": "Success"}), 200
     except Exception as e:
         print("❌ שגיאה בעדכון נתוני מחשב מהאתר:", e)
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route('/api/data/files', methods=['GET'])
-def get_device_logs():
-    print("📡 התחלת טיפול בבקשת האזנות עבור מכשיר")
-    mac_address = request.headers.get("mac-address")
-    if not mac_address:
-        return jsonify({"error": "Missing mac_address in headers"}), 400
-    try:
-        file_path = f"{mac_address}.json"
-        if os.path.exists(file_path):
-            with open(file_path, "r", encoding="utf-8") as file:
-                all_logs = json.load(file)  # זהו מערך של מילונים
-                # מחזירים את כל הרשימה כפי שהיא
-                print(f"✅ לוגים שנשלחו עבור {mac_address}:", all_logs)
-                return jsonify(all_logs)
-        return jsonify([]), 200  # אם אין קובץ, מחזיר רשימה ריקה
-    except Exception as e:
-        print(f"❌ שגיאה בשליפת לוגים עבור {mac_address}:", e)
         return jsonify({"error": str(e)}), 500
 
 
