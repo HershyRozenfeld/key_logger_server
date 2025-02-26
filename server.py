@@ -105,7 +105,7 @@ def get_status_all():
 def check_status():
     """בדיקת סטטוס אחרון של המכשיר (לפי MAC) מהקיי לוגר"""
     print("📡 התחלת בדיקת סטטוס מהמכשיר לפי MAC (מהקיי לוגר)")
-    mac_address = request.headers.get("mac_address")
+    mac_address = request.headers.get("mac-address")
     if not mac_address:
         return jsonify({"error": "Missing mac_address in headers"}), 400
 
