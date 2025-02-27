@@ -164,6 +164,7 @@ def get_device_logs():
         if os.path.exists(file_path):
             with open(file_path, "r", encoding="utf-8") as file:
                 data_json = json.load(file)
+                return data_json, 200
                 if not isinstance(data_json, list):
                     data_json = []
             # סינון כל הרשומות לפי ה-MAC ומחזירים את הלוגים כרשימה
