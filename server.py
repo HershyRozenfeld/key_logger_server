@@ -44,13 +44,14 @@ def write_to_device_status(data):
         if device_index >= 0:
             data_json[device_index].update(data)
         else:
+            data["isLogging"] = data.get("isLogging", True)  # ברירת מחדל: פעיל
             data_json.append(data)
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data_json, f, ensure_ascii=False, indent=4)
         print(f"✅ עדכון סטטוס נכתב ל-{file_path}")
     except Exception as e:
         print("❌ שגיאה בכתיבת device_status.json:", e)
-
+        
 def write_to_device_data(data):
     try:
         file_path = "all_devices_data.json"
