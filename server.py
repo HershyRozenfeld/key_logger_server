@@ -169,9 +169,9 @@ def get_device_logs():
             # סינון כל הרשומות לפי ה-MAC ומחזירים את הלוגים כרשימה
             device_logs = [entry["logs"] for entry in data_json if entry.get("mac_address") == mac_address]
             print("✅ לוגים שנשלחו עבור", mac_address, ":", device_logs)
-            return jsonify(device_logs)
+            return jsonify(device_logs), 200
         print(f"⚠️ הקובץ {file_path} לא נמצא")
-        return jsonify([]), 200
+        return jsonify([]), 404
     except Exception as e:
         print(f"❌ שגיאה בשליפת לוגים עבור {mac_address}:", e)
         return jsonify({"error": str(e)}), 500
