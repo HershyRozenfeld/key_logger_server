@@ -161,20 +161,22 @@ def get_device_logs():
         return jsonify({"error": "Missing mac_address in headers"}), 400
     try:
         file_path = "all_devices_data.json"
+        print(f"🔍 MAC שנשלח בבקשה: {mac_address}")
         if os.path.exists(file_path):
             with open(file_path, "r", encoding="utf-8") as file:
                 data_json = json.load(file)
-                return data_json, 200
                 if not isinstance(data_json, list):
                     data_json = []
-            # סינון כל הרשומות לפי ה-MAC ומחזירים את הלוגים כרשימה
+            print(f"📜 תוכן הקובץ {file_path}: {data_json}")
             device_logs = [entry["logs"] for entry in data_json if entry.get("mac_address") == mac_address]
-            print("✅ לוגים שנשלחו עבור", mac_address, ":", device_logs)
-            return jsonify(device_logs), 200
+            if not device_logs:
+                print(f"⚠️ לא נמצאו לוגים עבור {mac_address}, בדוק את ה-MAC או את התוכן")
+            print(f"✅ לוגים שנשלחו עבור {mac_address}: {device_logs}")
+            return jsonify(device_logs)
         print(f"⚠️ הקובץ {file_path} לא נמצא")
-        return jsonify([]), 404
+        return jsonify([]), 200
     except Exception as e:
-        print(f"❌ שגיאה בשליפת לוגים עבור {mac_address}:", e)
+        print(f"❌ שגיאה בשליפת לוגים עבור {mac_address}: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/status/all', methods=['GET'])
