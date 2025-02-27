@@ -168,7 +168,8 @@ def get_device_logs():
                 if not isinstance(data_json, list):
                     data_json = []
             print(f"📜 תוכן הקובץ {file_path}: {data_json}")
-            device_logs = [entry["logs"] for entry in data_json if entry.get("mac_address") == mac_address]
+            # התעלמות מרגישות לאותיות
+            device_logs = [entry["logs"] for entry in data_json if entry.get("mac_address", "").lower() == mac_address.lower()]
             if not device_logs:
                 print(f"⚠️ לא נמצאו לוגים עבור {mac_address}, בדוק את ה-MAC או את התוכן")
             print(f"✅ לוגים שנשלחו עבור {mac_address}: {device_logs}")
